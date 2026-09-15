@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QwikPrint — Inventory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F5F3EE;
+    --surface:#FFFFFF;
+    --border:#E2DFD3;
+    --ink:#1B1D22;
+    --ink-soft:#63666D;
+    --ink-faint:#9A9C9F;
+    --navy:#14213D;
+    --navy-soft:#1F3358;
+    --navy-text:#C9D2E0;
+    --amber:#C97A1F;
+    --amber-strong:#B4680F;
+    --amber-soft:#FBEEDA;
+    --ok:#2E7D53; --ok-bg:#E5F3EA;
+    --low:#B4741F; --low-bg:#FBF0DA;
+    --out:#C23B4A; --out-bg:#FBE6E8;
+    --sans:'Inter',system-ui,-apple-system,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --radius:4px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--sans);
+    background:var(--bg);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  #shell{display:flex;min-height:100vh;}
+
+  /* Sidebar */
+  #sidebar{
+    width:230px;flex:none;background:var(--navy);color:var(--navy-text);
+    display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+  }
+  .brand{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,0.08);}
+  .brand .name{font-weight:700;font-size:16px;color:#fff;letter-spacing:0.2px;}
+  .brand .sub{font-size:12px;color:var(--navy-text);margin-top:2px;font-family:var(--mono);}
+  nav{padding:14px 10px;flex:1;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius);
+    font-size:13.5px;color:var(--navy-text);cursor:pointer;margin-bottom:2px;border-left:3px solid transparent;
+    transition:background .12s ease;
+  }
+  .nav-item:hover{background:rgba(255,255,255,0.06);}
+  .nav-item.active{background:var(--navy-soft);color:#fff;border-left-color:var(--amber);}
+  .nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.55;flex:none;}
+  .sidebar-foot{padding:14px 20px 18px;font-size:11px;color:#7C8AA3;border-top:1px solid rgba(255,255,255,0.08);font-family:var(--mono);}
+
+  /* Main */
+  #main{flex:1;min-width:0;}
+  header.topbar{
+    padding:20px 32px;border-bottom:1px solid var(--border);background:var(--surface);
+    display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  header.topbar h1{font-size:19px;margin:0;font-weight:700;}
+  header.topbar p{margin:2px 0 0;color:var(--ink-soft);font-size:13px;}
+  #content{padding:28px 32px 60px;max-width:1180px;}
+
+  /* KPI cards */
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px;}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+  .kpi .label{font-size:11.5px;color:var(--ink-soft);text-transform:none;margin-bottom:6px;}
+  .kpi .value{font-family:var(--mono);font-size:22px;font-weight:600;}
+  .kpi.alert .value{color:var(--out);}
+  .kpi.warn .value{color:var(--low);}
+
+  h2.section-title{font-size:15px;font-weight:700;margin:0 0 12px;}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:24px;overflow:hidden;}
+  .panel-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  .panel-head h3{margin:0;font-size:14px;font-weight:700;}
+  .panel-body{padding:18px;}
+
+  /* Forms */
+  form.entry-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 12px;margin-bottom:4px;}
+  form.entry-form .field{display:flex;flex-direction:column;gap:4px;}
+  form.entry-form .field.span2{grid-column:span 2;}
+  label{font-size:11.5px;color:var(--ink-soft);}
+  input,select,textarea{
+    font-family:var(--sans);font-size:13px;padding:7px 9px;border:1px solid var(--border);
+    border-radius:var(--radius);background:#fff;color:var(--ink);
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--amber);outline-offset:0;border-color:var(--amber);}
+  .form-actions{grid-column:1/-1;display:flex;justify-content:flex-end;margin-top:4px;}
+  button{
+    font-family:var(--sans);font-size:13px;font-weight:600;padding:8px 16px;border-radius:var(--radius);
+    border:1px solid var(--amber-strong);background:var(--amber);color:#fff;cursor:pointer;
+  }
+  button:hover{background:var(--amber-strong);}
+  button.ghost{background:transparent;border:1px solid var(--border);color:var(--ink-soft);font-weight:500;padding:5px 10px;font-size:12px;}
+  button.ghost:hover{background:var(--bg);color:var(--ink);}
+  button.danger{background:transparent;border:1px solid var(--out);color:var(--out);font-weight:500;padding:4px 9px;font-size:11.5px;}
+  button.danger:hover{background:var(--out-bg);}
+
+  /* Tables */
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  thead th{
+    text-align:left;font-size:11px;color:var(--ink-soft);font-weight:600;
+    padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg);
+  }
+  tbody td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;font-family:var(--mono);}
+  tbody td.txt{font-family:var(--sans);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#FBFAF7;}
+  .empty-row td{color:var(--ink-faint);font-family:var(--sans);text-align:center;padding:22px;}
+
+  .badge{display:inline-block;font-family:var(--sans);font-size:11px;font-weight:600;padding:2.5px 8px;border-radius:20px;}
+  .badge.ok{background:var(--ok-bg);color:var(--ok);}
+  .badge.low{background:var(--low-bg);color:var(--low);}
+  .badge.out{background:var(--out-bg);color:var(--out);}
+
+  .search-box{display:flex;align-items:center;gap:6px;}
+  .search-box input{width:200px;}
+
+  .hint{font-size:12px;color:var(--ink-soft);margin:0 0 14px;line-height:1.5;}
+  .toast{
+    position:fixed;bottom:18px;right:18px;background:var(--navy);color:#fff;padding:10px 16px;
+    border-radius:var(--radius);font-size:13px;opacity:0;transform:translateY(6px);transition:all .18s ease;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  @media(max-width:860px){
+    #shell{flex-direction:column;}
+    #sidebar{width:100%;height:auto;position:relative;flex-direction:row;overflow-x:auto;}
+    .brand{border-bottom:none;padding:14px 16px;flex:none;}
+    nav{display:flex;padding:8px;flex:none;}
+    .nav-item{white-space:nowrap;}
+    .sidebar-foot{display:none;}
+    #content{padding:20px;}
+  }
+</style>
+</head>
+<body>
+<div id="shell">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="name">QwikPrint</div>
+      <div class="sub">Inventory Control</div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="sidebar-foot">Data saved automatically</div>
+  </aside>
+  <div id="main">
+    <header class="topbar">
+      <div>
+        <h1 id="pageTitle">Dashboard</h1>
+        <p id="pageSub">Live stock position across kiosks</p>
+      </div>
+    </header>
+    <div id="content"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- state ---------- */
+const STORAGE_KEY = 'qwikprint-inventory-v1';
+const SHARED = true; // team-wide inventory data, visible to everyone who opens this tool
+let state = { materials: [], purchases: [], issues: [], returns: [] };
+let currentTab = 'dashboard';
+
+const TABS = [
+  {id:'dashboard', label:'Dashboard', sub:'Live stock position across kiosks'},
+  {id:'materials', label:'Material Master', sub:'Materials tracked in inventory'},
+  {id:'purchases', label:'Purchase & GR', sub:'Goods received into stock'},
+  {id:'issues', label:'Material Issue', sub:'Materials issued to kiosks / locations'},
+  {id:'returns', label:'Returns', sub:'Materials returned from kiosks'},
+  {id:'register', label:'Stock Register', sub:'Opening + Received + Good Returns − Issued'},
+];
+
+function uid(prefix){ return prefix + '-' + Date.now().toString(36) + Math.floor(Math.random()*1000); }
+function fmtNum(n){ return (Math.round((n+Number.EPSILON)*100)/100).toLocaleString('en-IN'); }
+function fmtMoney(n){ return '₹' + fmtNum(n); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+async function loadState(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, SHARED);
+    if(res && res.value){
+      state = JSON.parse(res.value);
+      state.materials = state.materials || [];
+      state.purchases = state.purchases || [];
+      state.issues = state.issues || [];
+      state.returns = state.returns || [];
+      return;
+    }
+  }catch(e){ /* key doesn't exist yet */ }
+  // seed with QwikPrint's existing Material Master defaults
+  state = {
+    materials: [
+      {code:'MAT001', name:'A4 Paper', category:'Stationery', unit:'Pack', reorder:20, opening:0, openingCost:0, supplier:'', active:true},
+      {code:'MAT002', name:'Printer Ink', category:'Consumable', unit:'Nos', reorder:10, opening:0, openingCost:0, supplier:'', active:true},
+      {code:'MAT003', name:'Ethernet Cable', category:'Electrical', unit:'Meter', reorder:50, opening:0, openingCost:0, supplier:'', active:true},
+    ],
+    purchases: [], issues: [], returns: []
+  };
+  await persist();
+}
+
+async function persist(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(state), SHARED);
+  }catch(e){
+    console.error('Save failed', e);
+    toast('Could not save — check connection');
+  }
+}
+
+/* ---------- derived ---------- */
+function activeMaterials(){ return state.materials.filter(m=>m.active); }
+
+function computeRegister(){
+  return state.materials.map(m=>{
+    const received = state.purchases.filter(p=>p.code===m.code).reduce((s,p)=>s+Number(p.qty||0),0);
+    const issued = state.issues.filter(i=>i.code===m.code).reduce((s,i)=>s+Number(i.qty||0),0);
+    const goodReturned = state.returns.filter(r=>r.code===m.code && r.condition==='Good').reduce((s,r)=>s+Number(r.qty||0),0);
+    const closing = Number(m.opening||0) + received + goodReturned - issued;
+    const purchaseQty = state.purchases.filter(p=>p.code===m.code).reduce((s,p)=>s+Number(p.qty||0),0);
+    const purchaseValue = state.purchases.filter(p=>p.code===m.code).reduce((s,p)=>s+Number(p.qty||0)*Number(p.unitCost||0),0);
+    const avgCost = purchaseQty > 0 ? purchaseValue/purchaseQty : Number(m.openingCost||0);
+    const value = closing * avgCost;
+    let status = 'OK';
+    if(closing <= 0) status = 'OUT OF STOCK';
+    else if(closing <= Number(m.reorder||0)) status = 'LOW STOCK';
+    return {...m, received, issued, goodReturned, closing, avgCost, value, status};
+  });
+}
+
+function badge(status){
+  const cls = status==='OK' ? 'ok' : status==='LOW STOCK' ? 'low' : 'out';
+  return `<span class="badge ${cls}">${status}</span>`;
+}
+
+function materialOptions(selected){
+  return activeMaterials().map(m=>
+    `<option value="${m.code}" ${m.code===selected?'selected':''}>${m.code} — ${m.name} (${m.unit})</option>`
+  ).join('');
+}
+
+function materialName(code){
+  const m = state.materials.find(m=>m.code===code);
+  return m ? m.name : code;
+}
+function materialUnit(code){
+  const m = state.materials.find(m=>m.code===code);
+  return m ? m.unit : '';
+}
+
+/* ---------- rendering ---------- */
+function renderNav(){
+  const nav = document.getElementById('nav');
+  nav.innerHTML = TABS.map(t=>
+    `<div class="nav-item ${t.id===currentTab?'active':''}" data-tab="${t.id}"><span class="nav-dot"></span>${t.label}</div>`
+  ).join('');
+}
+
+function renderHeader(){
+  const t = TABS.find(t=>t.id===currentTab);
+  document.getElementById('pageTitle').textContent = t.label;
+  document.getElementById('pageSub').textContent = t.sub;
+}
+
+function render(){
+  renderNav();
+  renderHeader();
+  const c = document.getElementById('content');
+  if(currentTab==='dashboard') c.innerHTML = viewDashboard();
+  else if(currentTab==='materials') c.innerHTML = viewMaterials();
+  else if(currentTab==='purchases') c.innerHTML = viewPurchases();
+  else if(currentTab==='issues') c.innerHTML = viewIssues();
+  else if(currentTab==='returns') c.innerHTML = viewReturns();
+  else if(currentTab==='register') c.innerHTML = viewRegister();
+}
+
+/* ---------- Dashboard ---------- */
+function viewDashboard(){
+  const reg = computeRegister();
+  const totalMaterials = state.materials.length;
+  const totalReceived = state.purchases.reduce((s,p)=>s+Number(p.qty||0),0);
+  const totalIssued = state.issues.reduce((s,i)=>s+Number(i.qty||0),0);
+  const totalReturned = state.returns.filter(r=>r.condition==='Good').reduce((s,r)=>s+Number(r.qty||0),0);
+  const currentStock = reg.reduce((s,r)=>s+r.closing,0);
+  const invValue = reg.reduce((s,r)=>s+r.value,0);
+  const lowCount = reg.filter(r=>r.status==='LOW STOCK').length;
+  const outCount = reg.filter(r=>r.status==='OUT OF STOCK').length;
+
+  const alertRows = reg.filter(r=>r.status!=='OK');
+
+  return `
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">Total Materials</div><div class="value">${totalMaterials}</div></div>
+      <div class="kpi"><div class="label">Total Received</div><div class="value">${fmtNum(totalReceived)}</div></div>
+      <div class="kpi"><div class="label">Total Issued</div><div class="value">${fmtNum(totalIssued)}</div></div>
+      <div class="kpi"><div class="label">Total Returned</div><div class="value">${fmtNum(totalReturned)}</div></div>
+      <div class="kpi"><div class="label">Current Stock Qty</div><div class="value">${fmtNum(currentStock)}</div></div>
+      <div class="kpi"><div class="label">Inventory Value</div><div class="value">${fmtMoney(invValue)}</div></div>
+      <div class="kpi ${lowCount?'warn':''}"><div class="label">Low Stock Items</div><div class="value">${lowCount}</div></div>
+      <div class="kpi ${outCount?'alert':''}"><div class="label">Out of Stock</div><div class="value">${outCount}</div></div>
+    </div>
+
+    <h2 class="section-title">Needs attention</h2>
+    <div class="panel">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Code</th><th>Material</th><th>Closing</th><th>Reorder</th><th>Status</th><th>Value</th></tr></thead>
+          <tbody>
+            ${alertRows.length ? alertRows.map(r=>`
+              <tr>
+                <td>${r.code}</td>
+                <td class="txt">${r.name}</td>
+                <td>${fmtNum(r.closing)} ${r.unit}</td>
+                <td>${fmtNum(r.reorder)}</td>
+                <td class="txt">${badge(r.status)}</td>
+                <td>${fmtMoney(r.value)}</td>
+              </tr>
+            `).join('') : `<tr class="empty-row"><td colspan="6">Nothing low or out of stock — all clear.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------- Material Master ---------- */
+function viewMaterials(){
+  return `
+    <div class="panel">
+      <div class="panel-head"><h3>Add material</h3></div>
+      <div class="panel-body">
+        <form class="entry-form" data-form="material">
+          <div class="field"><label>Material code</label><input name="code" placeholder="MAT004" required></div>
+          <div class="field span2"><label>Material name</label><input name="name" placeholder="Toner Cartridge" required></div>
+          <div class="field"><label>Category</label><input name="category" placeholder="Consumable"></div>
+          <div class="field"><label>Unit</label><input name="unit" placeholder="Nos" required></div>
+          <div class="field"><label>Reorder level</label><input name="reorder" type="number" min="0" step="any" value="0"></div>
+          <div class="field"><label>Opening stock</label><input name="opening" type="number" min="0" step="any" value="0"></div>
+          <div class="field"><label>Opening unit cost</label><input name="openingCost" type="number" min="0" step="any" value="0"></div>
+          <div class="field"><label>Supplier</label><input name="supplier" placeholder="Optional"></div>
+          <div class="form-actions"><button type="submit">Add material</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Materials (${state.materials.length})</h3></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Code</th><th class="txt">Name</th><th class="txt">Category</th><th>Unit</th><th>Reorder</th><th>Opening</th><th>Supplier</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            ${state.materials.length ? state.materials.map(m=>`
+              <tr>
+                <td>${m.code}</td>
+                <td class="txt">${m.name}</td>
+                <td class="txt">${m.category||'—'}</td>
+                <td>${m.unit}</td>
+                <td>${fmtNum(m.reorder)}</td>
+                <td>${fmtNum(m.opening)}</td>
+                <td class="txt">${m.supplier||'—'}</td>
+                <td class="txt"><span class="badge ${m.active?'ok':'out'}">${m.active?'ACTIVE':'INACTIVE'}</span></td>
+                <td class="txt">
+                  <button class="ghost" data-action="toggle-material" data-code="${m.code}">${m.active?'Deactivate':'Activate'}</button>
+                  <button class="danger" data-action="delete-material" data-code="${m.code}">Delete</button>
+                </td>
+              </tr>
+            `).join('') : `<tr class="empty-row"><td colspan="9">No materials yet. Add one above.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------- Purchase & GR ---------- */
+function viewPurchases(){
+  const rows = [...state.purchases].sort((a,b)=>b.date.localeCompare(a.date));
+  return `
+    <div class="panel">
+      <div class="panel-head"><h3>Log a goods receipt</h3></div>
+      <div class="panel-body">
+        <p class="hint">${state.materials.length ? '' : 'Add a material in Material Master first.'}</p>
+        <form class="entry-form" data-form="purchase">
+          <div class="field"><label>Date</label><input name="date" type="date" value="${todayStr()}" required></div>
+          <div class="field"><label>GRN No.</label><input name="grn" placeholder="GRN-001"></div>
+          <div class="field"><label>PO No.</label><input name="po" placeholder="PO-014"></div>
+          <div class="field span2"><label>Material</label><select name="code" required>${materialOptions()}</select></div>
+          <div class="field"><label>Qty received</label><input name="qty" type="number" min="0" step="any" required></div>
+          <div class="field"><label>Unit cost</label><input name="unitCost" type="number" min="0" step="any" value="0"></div>
+          <div class="field"><label>Supplier</label><input name="supplier" placeholder="Optional"></div>
+          <div class="field"><label>Invoice No.</label><input name="invoice" placeholder="Optional"></div>
+          <div class="field"><label>Received by</label><input name="receivedBy" placeholder="Name"></div>
+          <div class="field span2"><label>Remarks</label><input name="remarks" placeholder="Optional"></div>
+          <div class="form-actions"><button type="submit">Add receipt</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Receipts (${rows.length})</h3></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>GRN</th><th>PO</th><th class="txt">Material</th><th>Qty</th><th>Unit cost</th><th>Total</th><th class="txt">Received by</th><th></th></tr></thead>
+          <tbody>
+            ${rows.length ? rows.map(p=>`
+              <tr>
+                <td>${p.date}</td>
+                <td class="txt">${p.grn||'—'}</td>
+                <td class="txt">${p.po||'—'}</td>
+                <td class="txt">${materialName(p.code)}</td>
+                <td>${fmtNum(p.qty)} ${materialUnit(p.code)}</td>
+                <td>${fmtMoney(p.unitCost)}</td>
+                <td>${fmtMoney(p.qty*p.unitCost)}</td>
+                <td class="txt">${p.receivedBy||'—'}</td>
+                <td class="txt"><button class="danger" data-action="delete-purchase" data-id="${p.id}">Delete</button></td>
+              </tr>
+            `).join('') : `<tr class="empty-row"><td colspan="9">No receipts logged yet.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------- Material Issue ---------- */
+function viewIssues(){
+  const rows = [...state.issues].sort((a,b)=>b.date.localeCompare(a.date));
+  return `
+    <div class="panel">
+      <div class="panel-head"><h3>Issue material to a kiosk</h3></div>
+      <div class="panel-body">
+        <form class="entry-form" data-form="issue">
+          <div class="field"><label>Date</label><input name="date" type="date" value="${todayStr()}" required></div>
+          <div class="field"><label>Issue No.</label><input name="issueNo" placeholder="ISS-001"></div>
+          <div class="field"><label>Location</label><input name="location" placeholder="Chennai" required></div>
+          <div class="field"><label>Kiosk No.</label><input name="kiosk" placeholder="0023"></div>
+          <div class="field span2"><label>Material</label><select name="code" required>${materialOptions()}</select></div>
+          <div class="field"><label>Qty issued</label><input name="qty" type="number" min="0" step="any" required></div>
+          <div class="field"><label>Issued by</label><input name="issuedBy" placeholder="Name"></div>
+          <div class="field"><label>Purpose</label><input name="purpose" placeholder="Installation"></div>
+          <div class="field span2"><label>Remarks</label><input name="remarks" placeholder="Optional"></div>
+          <div class="form-actions"><button type="submit">Add issue</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Issues (${rows.length})</h3></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Issue No.</th><th class="txt">Location</th><th>Kiosk</th><th class="txt">Material</th><th>Qty</th><th class="txt">Issued by</th><th class="txt">Purpose</th><th></th></tr></thead>
+          <tbody>
+            ${rows.length ? rows.map(i=>`
+              <tr>
+                <td>${i.date}</td>
+                <td class="txt">${i.issueNo||'—'}</td>
+                <td class="txt">${i.location}</td>
+                <td>${i.kiosk||'—'}</td>
+                <td class="txt">${materialName(i.code)}</td>
+                <td>${fmtNum(i.qty)} ${materialUnit(i.code)}</td>
+                <td class="txt">${i.issuedBy||'—'}</td>
+                <td class="txt">${i.purpose||'—'}</td>
+                <td class="txt"><button class="danger" data-action="delete-issue" data-id="${i.id}">Delete</button></td>
+              </tr>
+            `).join('') : `<tr class="empty-row"><td colspan="9">No issues logged yet.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------- Returns ---------- */
+function viewReturns(){
+  const rows = [...state.returns].sort((a,b)=>b.date.localeCompare(a.date));
+  return `
+    <div class="panel">
+      <div class="panel-head"><h3>Log a return</h3></div>
+      <div class="panel-body">
+        <p class="hint">Only returns marked "Good" are added back to usable stock — same rule as the spreadsheet.</p>
+        <form class="entry-form" data-form="return">
+          <div class="field"><label>Date</label><input name="date" type="date" value="${todayStr()}" required></div>
+          <div class="field"><label>Return No.</label><input name="returnNo" placeholder="RET-001"></div>
+          <div class="field"><label>Location</label><input name="location" placeholder="Trichy" required></div>
+          <div class="field"><label>Kiosk No.</label><input name="kiosk" placeholder="0025"></div>
+          <div class="field span2"><label>Material</label><select name="code" required>${materialOptions()}</select></div>
+          <div class="field"><label>Qty returned</label><input name="qty" type="number" min="0" step="any" required></div>
+          <div class="field"><label>Condition</label>
+            <select name="condition"><option value="Good">Good</option><option value="Damaged">Damaged</option></select>
+          </div>
+          <div class="field"><label>Returned by</label><input name="returnedBy" placeholder="Name"></div>
+          <div class="field span2"><label>Remarks</label><input name="remarks" placeholder="Optional"></div>
+          <div class="form-actions"><button type="submit">Add return</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Returns (${rows.length})</h3></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Return No.</th><th class="txt">Location</th><th>Kiosk</th><th class="txt">Material</th><th>Qty</th><th class="txt">Condition</th><th class="txt">Returned by</th><th></th></tr></thead>
+          <tbody>
+            ${rows.length ? rows.map(r=>`
+              <tr>
+                <td>${r.date}</td>
+                <td class="txt">${r.returnNo||'—'}</td>
+                <td class="txt">${r.location}</td>
+                <td>${r.kiosk||'—'}</td>
+                <td class="txt">${materialName(r.code)}</td>
+                <td>${fmtNum(r.qty)} ${materialUnit(r.code)}</td>
+                <td class="txt">${r.condition==='Good' ? '<span class="badge ok">GOOD</span>' : '<span class="badge out">DAMAGED</span>'}</td>
+                <td class="txt">${r.returnedBy||'—'}</td>
+                <td class="txt"><button class="danger" data-action="delete-return" data-id="${r.id}">Delete</button></td>
+              </tr>
+            `).join('') : `<tr class="empty-row"><td colspan="9">No returns logged yet.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------- Stock Register ---------- */
+function viewRegister(){
+  const reg = computeRegister();
+  return `
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Stock Register</h3>
+        <span class="hint" style="margin:0;">Closing = Opening + Received + Good Returns − Issued</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th><th class="txt">Material</th><th>Unit</th><th>Opening</th><th>Received</th>
+              <th>Issued</th><th>Returned</th><th>Closing</th><th>Reorder</th><th class="txt">Status</th><th>Avg cost</th><th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${reg.length ? reg.map(r=>`
+              <tr>
+                <td>${r.code}</td>
+                <td class="txt">${r.name}</td>
+                <td>${r.unit}</td>
+                <td>${fmtNum(r.opening)}</td>
+                <td>${fmtNum(r.received)}</td>
+                <td>${fmtNum(r.issued)}</td>
+                <td>${fmtNum(r.goodReturned)}</td>
+                <td><strong>${fmtNum(r.closing)}</strong></td>
+                <td>${fmtNum(r.reorder)}</td>
+                <td class="txt">${badge(r.status)}</td>
+                <td>${fmtMoney(r.avgCost)}</td>
+                <td>${fmtMoney(r.value)}</td>
+              </tr>
+            `).join('') : `<tr class="empty-row"><td colspan="12">No materials yet.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------- events ---------- */
+document.getElementById('nav').addEventListener('click', (e)=>{
+  const item = e.target.closest('.nav-item');
+  if(!item) return;
+  currentTab = item.dataset.tab;
+  render();
+});
+
+document.getElementById('content').addEventListener('submit', async (e)=>{
+  const form = e.target.closest('form[data-form]');
+  if(!form) return;
+  e.preventDefault();
+  const type = form.dataset.form;
+  const data = Object.fromEntries(new FormData(form).entries());
+
+  if(type==='material'){
+    if(state.materials.some(m=>m.code===data.code)){ toast('That material code already exists'); return; }
+    state.materials.push({
+      code:data.code.trim(), name:data.name.trim(), category:data.category.trim(),
+      unit:data.unit.trim(), reorder:Number(data.reorder||0), opening:Number(data.opening||0),
+      openingCost:Number(data.openingCost||0), supplier:data.supplier.trim(), active:true
+    });
+    toast('Material added');
+  }
+  else if(type==='purchase'){
+    state.purchases.push({id:uid('p'), date:data.date, grn:data.grn, po:data.po, code:data.code,
+      qty:Number(data.qty), unitCost:Number(data.unitCost||0), supplier:data.supplier,
+      invoice:data.invoice, receivedBy:data.receivedBy, remarks:data.remarks});
+    toast('Receipt logged');
+  }
+  else if(type==='issue'){
+    state.issues.push({id:uid('i'), date:data.date, issueNo:data.issueNo, location:data.location,
+      kiosk:data.kiosk, code:data.code, qty:Number(data.qty), issuedBy:data.issuedBy,
+      purpose:data.purpose, remarks:data.remarks});
+    toast('Issue logged');
+  }
+  else if(type==='return'){
+    state.returns.push({id:uid('r'), date:data.date, returnNo:data.returnNo, location:data.location,
+      kiosk:data.kiosk, code:data.code, qty:Number(data.qty), condition:data.condition,
+      returnedBy:data.returnedBy, remarks:data.remarks});
+    toast('Return logged');
+  }
+  await persist();
+  render();
+});
+
+document.getElementById('content').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('button[data-action]');
+  if(!btn) return;
+  const action = btn.dataset.action;
+
+  if(action==='toggle-material'){
+    const m = state.materials.find(m=>m.code===btn.dataset.code);
+    if(m) m.active = !m.active;
+  }
+  else if(action==='delete-material'){
+    if(!confirm('Delete this material? Its transaction history will stay in the ledgers.')) return;
+    state.materials = state.materials.filter(m=>m.code!==btn.dataset.code);
+  }
+  else if(action==='delete-purchase'){
+    state.purchases = state.purchases.filter(p=>p.id!==btn.dataset.id);
+  }
+  else if(action==='delete-issue'){
+    state.issues = state.issues.filter(i=>i.id!==btn.dataset.id);
+  }
+  else if(action==='delete-return'){
+    state.returns = state.returns.filter(r=>r.id!==btn.dataset.id);
+  }
+  else { return; }
+
+  await persist();
+  render();
+});
+
+/* ---------- init ---------- */
+(async function init(){
+  document.getElementById('content').innerHTML = '<p class="hint">Loading…</p>';
+  await loadState();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -42,9 +42,19 @@
     width:230px;flex:none;background:var(--navy);color:var(--navy-text);
     display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
   }
-  .brand{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,0.08);}
+  .brand{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;gap:10px;}
   .brand .name{font-weight:700;font-size:16px;color:#fff;letter-spacing:0.2px;}
   .brand .sub{font-size:12px;color:var(--navy-text);margin-top:2px;font-family:var(--mono);}
+  #menuToggle{
+    display:none;flex:none;background:transparent;border:1px solid rgba(255,255,255,0.18);
+    border-radius:var(--radius);width:36px;height:32px;padding:0;cursor:pointer;
+    flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  }
+  #menuToggle span{display:block;width:16px;height:2px;background:#fff;border-radius:2px;transition:transform .18s ease,opacity .18s ease;}
+  #menuToggle[aria-expanded="true"] span:nth-child(1){transform:translateY(6px) rotate(45deg);}
+  #menuToggle[aria-expanded="true"] span:nth-child(2){opacity:0;}
+  #menuToggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-6px) rotate(-45deg);}
+  #navOverlay{display:none;}
   nav{padding:14px 10px;flex:1;}
   .nav-item{
     display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius);
@@ -138,14 +148,25 @@
     .brand{border-bottom:none;padding:10px 12px;flex:none;}
     .brand .name{font-size:14px;}
     .brand .sub{font-size:10.5px;}
+    #menuToggle{display:flex;}
+
     nav{
-      display:flex;padding:6px 6px 6px 0;flex:1;overflow-x:auto;-webkit-overflow-scrolling:touch;
-      gap:2px;scrollbar-width:none;
+      display:flex;flex-direction:column;gap:2px;
+      position:absolute;top:100%;left:0;right:0;
+      background:var(--navy);padding:6px;
+      max-height:0;overflow:hidden;
+      transition:max-height .22s ease;
+      z-index:30;
     }
-    nav::-webkit-scrollbar{display:none;}
-    .nav-item{white-space:nowrap;padding:9px 12px;margin-bottom:0;font-size:12.5px;border-left:none;border-bottom:3px solid transparent;border-radius:var(--radius) var(--radius) 0 0;}
-    .nav-item.active{border-left:none;border-bottom-color:var(--amber);}
+    #sidebar.open nav{max-height:60vh;overflow-y:auto;padding:8px;border-top:1px solid rgba(255,255,255,0.1);}
+    .nav-item{white-space:normal;padding:11px 12px;margin-bottom:0;font-size:13.5px;border-left:3px solid transparent;border-radius:var(--radius);}
+    .nav-item.active{border-bottom-color:transparent;}
     .sidebar-foot{display:none;}
+
+    #navOverlay{
+      display:none;position:fixed;inset:0;background:rgba(15,18,26,0.35);z-index:19;
+    }
+    #sidebar.open ~ #navOverlay{display:block;}
 
     header.topbar{padding:14px 16px;}
     header.topbar h1{font-size:16px;}
@@ -182,12 +203,18 @@
 <div id="shell">
   <aside id="sidebar">
     <div class="brand">
-      <div class="name">QwikPrint</div>
-      <div class="sub">Inventory Control</div>
+      <div>
+        <div class="name">QwikPrint</div>
+        <div class="sub">Inventory Control</div>
+      </div>
+      <button id="menuToggle" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
     </div>
     <nav id="nav"></nav>
     <div class="sidebar-foot">Data saved automatically</div>
   </aside>
+  <div id="navOverlay"></div>
   <div id="main">
     <header class="topbar">
       <div>
@@ -622,7 +649,25 @@ document.getElementById('nav').addEventListener('click', (e)=>{
   if(!item) return;
   currentTab = item.dataset.tab;
   render();
+  closeMenu();
 });
+
+const sidebarEl = document.getElementById('sidebar');
+const menuToggle = document.getElementById('menuToggle');
+const navOverlay = document.getElementById('navOverlay');
+
+function openMenu(){
+  sidebarEl.classList.add('open');
+  menuToggle.setAttribute('aria-expanded','true');
+}
+function closeMenu(){
+  sidebarEl.classList.remove('open');
+  menuToggle.setAttribute('aria-expanded','false');
+}
+menuToggle.addEventListener('click', ()=>{
+  sidebarEl.classList.contains('open') ? closeMenu() : openMenu();
+});
+navOverlay.addEventListener('click', closeMenu);
 
 document.getElementById('content').addEventListener('submit', async (e)=>{
   const form = e.target.closest('form[data-form]');
